@@ -14,10 +14,12 @@ import org.apache.logging.log4j.core.config.plugins.validation.constraints.Requi
 
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.Charset;
 
 @Plugin(name = "Http", category = "Core", elementType = Appender.ELEMENT_TYPE, printObject = true)
 public class PostAppender extends AbstractAppender {
 
+    public static final Charset UTF8 = Charset.forName("UTF-8");
     private final OkHttpClient client;
     private final Request.Builder builder;
     private final MediaType contentType;
@@ -36,15 +38,34 @@ public class PostAppender extends AbstractAppender {
         final RequestBody body = RequestBody.create(contentType, bs);
 
         try {
-            final Response response = client.newCall(builder.post(body).build()).execute();
+            final Request request = builder.post(body).build();
+            final Response response = client.newCall(request).execute();
             final boolean successful = response.isSuccessful();
             response.close();
             if (!successful) {
-                throw new AppenderLoggingException("HTTP response: " + response.message());
+                throw new AppenderLoggingException(describe(request, response));
             }
         } catch (IOException e) {
             throw new AppenderLoggingException(e);
         }
+    }
+
+    private String describe(Request request, Response response) {
+        String body = "";
+        try {
+            final Buffer sink = new Buffer();
+            request.body().writeTo(sink);
+            body = sink.readString(UTF8);
+        } catch (IOException ignore) { }
+        return String.format("%d %s -> %s %s\n%s\n%s"
+                , response.code()
+                , response.message()
+                , request.method()
+                , request.url()
+                , request.headers()
+                , body
+
+        );
     }
 
     @PluginFactory

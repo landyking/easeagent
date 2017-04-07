@@ -24,7 +24,7 @@ import static java.text.MessageFormat.format;
 @AutoService(Plugin.class)
 public class TraceEvents implements Plugin<TraceEvents.Configuration> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger("requests");
+    private static final Logger LOGGER = LoggerFactory.getLogger(TraceEvents.class);
 
     @Override
     public void hook(Configuration conf, Instrumentation inst, Subscription subs) {
@@ -34,10 +34,11 @@ public class TraceEvents implements Plugin<TraceEvents.Configuration> {
     }
 
     static class Reporter {
+        private static final Logger POST = LoggerFactory.getLogger("requests");
 
         private final Map<String, Object> hostInfo;
-        private final JsonFactory         jsonFactory;
-        private final String              bulkTemplate;
+        private final JsonFactory jsonFactory;
+        private final String bulkTemplate;
 
         Reporter(Map<String, Object> hostInfo, JsonFactory jsonFactory, String bulkTemplate) {
             this.hostInfo = hostInfo;
@@ -65,7 +66,11 @@ public class TraceEvents implements Plugin<TraceEvents.Configuration> {
                 json.writeEndObject();
                 json.writeRaw('\n'); // logstash need a '\n' as delimiter
                 json.flush();
-                LOGGER.info(sb.toString());
+                try {
+                    POST.info(sb.toString());
+                } catch (RuntimeException e) {
+                    LOGGER.error(e.getMessage());
+                }
             } catch (IOException e) {
                 throw new MayBeABug(e);
             }
@@ -80,7 +85,7 @@ public class TraceEvents implements Plugin<TraceEvents.Configuration> {
         private void write(JsonGenerator json, Map<String, Object> map) throws IOException {
             for (Map.Entry<String, Object> entry : map.entrySet()) {
                 Object value = entry.getValue();
-                if(value instanceof Long) {
+                if (value instanceof Long) {
                     json.writeNumberField(entry.getKey(), (Long) value);
                 } else {
                     json.writeStringField(entry.getKey(), value.toString());

@@ -28,8 +28,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 @AutoService(Plugin.class)
 public class MetricsXReport implements Plugin<MetricsXReport.Configuration> {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger("metrics");
+    private static final Logger LOGGER = LoggerFactory.getLogger(MetricsXReport.class);
 
     @Override
     public void hook(final Configuration conf, Instrumentation inst, Subscription subs) {
@@ -77,10 +76,10 @@ public class MetricsXReport implements Plugin<MetricsXReport.Configuration> {
     }
 
     private static class Reporting implements Runnable {
-        private final QuantizedTime       quantizedTime;
-        private final JsonFactory         factory;
+        private final QuantizedTime quantizedTime;
+        private final JsonFactory factory;
         private final Map<String, String> hostInfo;
-        private final String              bulkTemplate;
+        private final String bulkTemplate;
 
         Reporting(Configuration conf, QuantizedTime quantizedTime, JsonFactory factory) {
 
@@ -111,11 +110,12 @@ public class MetricsXReport implements Plugin<MetricsXReport.Configuration> {
     }
 
     static class Consumer implements Metrics.Consumer {
+        private static final Logger POST = LoggerFactory.getLogger("metrics");
 
-        private final JsonFactory         factory;
-        private final long                timestamp;
+        private final JsonFactory factory;
+        private final long timestamp;
         private final Map<String, String> hostInfo;
-        private final String              bulk;
+        private final String bulk;
 
         Consumer(JsonFactory factory, long timestamp, Map<String, String> hostInfo, String bulk) {
             this.factory = factory;
@@ -132,9 +132,13 @@ public class MetricsXReport implements Plugin<MetricsXReport.Configuration> {
                 if (Strings.isNullOrEmpty(content)) return;
 
                 // TODO batch out metrics
-                LOGGER.info(content);
-            } catch (IOException e) {
-                throw new MayBeABug(e);
+                try {
+                    POST.info(content);
+                } catch (RuntimeException e) {
+                    LOGGER.error(e.getMessage());
+                }
+            } catch (Exception e) {
+                LOGGER.error("Unexpected", e);
             }
         }
 
