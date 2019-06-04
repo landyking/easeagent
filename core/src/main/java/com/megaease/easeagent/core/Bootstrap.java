@@ -5,6 +5,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.megaease.easeagent.core.mbean.CallTraceSetting;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import net.bytebuddy.agent.builder.AgentBuilder;
@@ -17,8 +18,11 @@ import net.bytebuddy.utility.JavaModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import java.io.File;
 import java.lang.instrument.Instrumentation;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Map;
@@ -53,8 +57,15 @@ public class Bootstrap {
                              .or(nameStartsWith("sun.reflect."))
         ).installOn(inst);
 
+        MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+        ObjectName mbeanName = new ObjectName("com.megaease.easeagent.core:type=CallTraceSetting");
+        server.registerMBean(new CallTraceSetting(), mbeanName);
+
         LOGGER.info("Initialization has took {}ms", TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - begin));
     }
+
+
+
 
     private static Map<Class<?>, Iterable<QualifiedBean>> scoped(Iterable<Class<?>> providers, final Config conf) {
         return ImmutableMap.copyOf(Maps.transformValues(

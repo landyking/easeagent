@@ -3,7 +3,9 @@ package com.megaease.easeagent.requests;
 import com.alibaba.fastjson.JSON;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.megaease.easeagent.common.CallTrace;
 import com.megaease.easeagent.common.NamedDaemonThreadFactory;
+import com.megaease.easeagent.core.mbean.CallTraceSetting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,7 +86,7 @@ class AsyncLogReporter implements Reporter {
 
             @Override
             public Context getCallStackJson() {
-                return callstack ? context : Context.empty();
+                return callstack && CallTraceSetting.enabled ? context : Context.empty();
             }
 
             @Override
